@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>RSVP Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1f2a3a;--muted:#667085;--line:#e6e8ec;--bg:#f6f4f2;--card:#fff;--accent:#8a5a6b;--yes:#1f7a4d;--no:#b3261e;--wait:#b7791f}
+*{box-sizing:border-box;margin:0}
+body{font:400 15px/1.5 'Jost',system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+header{background:var(--ink);color:#fff;padding:26px 20px}
+.in{max-width:1080px;margin:0 auto}
+header small{opacity:.7;letter-spacing:.12em;text-transform:uppercase;font-size:.75rem}
+header h1{font:400 2rem/1.2 'Cormorant Garamond',Georgia,serif;margin:4px 0}
+header p{opacity:.8}
+main{max-width:1080px;margin:0 auto;padding:22px 16px 60px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.card b{display:block;font:400 2.3rem/1.1 'Cormorant Garamond',Georgia,serif}
+.card span{color:var(--muted);font-size:.85rem;text-transform:uppercase;letter-spacing:.06em}
+.card.yes b{color:var(--yes)}.card.no b{color:var(--no)}.card.wait b{color:var(--wait)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px}
+.panel h2{font:600 1.15rem 'Cormorant Garamond',Georgia,serif;margin-bottom:10px}
+.bar{height:12px;background:#eceef2;border-radius:99px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;color:var(--muted);font-size:.85rem}
+.legend u{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;text-decoration:none}
+.meals{display:flex;flex-wrap:wrap;gap:8px}.meals span{background:#f1f2f5;border-radius:99px;padding:6px 14px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.tools input{flex:1;min-width:160px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit}
+.tab,.btn{padding:9px 14px;border:1px solid var(--line);background:#fff;border-radius:10px;font:inherit;cursor:pointer}
+.tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.p{background:var(--accent);color:#fff;border-color:var(--accent)}
+.wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;background:#fff;min-width:760px}
+th{background:#faf9f8;text-align:left;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:11px 12px;border-bottom:1px solid var(--line)}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td small{display:block;color:var(--muted)}
+.pill{display:inline-block;padding:3px 11px;border-radius:99px;font-size:.8rem;font-weight:500}
+.pill.yes{background:#e3f4ea;color:var(--yes)}.pill.no{background:#fbe6e4;color:var(--no)}.pill.wait{background:#fbf0d9;color:var(--wait)}
+#state{padding:40px 16px;text-align:center;color:var(--muted)}
+.err{color:var(--no)}
+@media print{header{background:#fff;color:#000}.tools,.btn{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<header><div class="in"><small>RSVP dashboard</small><h1 id="title">Loading...</h1><p id="sub"></p></div></header>
+<main>
+  <div id="state">Loading replies...</div>
+  <div id="app" style="display:none">
+    <div class="cards">
+      <div class="card yes"><b id="cYes">0</b><span>People attending</span></div>
+      <div class="card"><b id="cRep">0</b><span>Replies received</span></div>
+      <div class="card no"><b id="cNo">0</b><span>Declined</span></div>
+      <div class="card wait" id="cardWait"><b id="cWait">0</b><span>Still to reply</span></div>
+      <div class="card" id="cardSeats"><b id="cSeats">0</b><span>Seats invited</span></div>
+    </div>
+    <div class="panel" id="progress"><h2>Response progress</h2><div class="bar" id="bar"></div>
+      <div class="legend"><span><u style="background:var(--yes)"></u><span id="lYes"></span></span><span><u style="background:var(--no)"></u><span id="lNo"></span></span><span id="lWaitW"><u style="background:#d9dce2"></u><span id="lWait"></span></span></div></div>
+    <div class="panel" id="mealPanel"><h2>Meal choices</h2><div class="meals" id="meals"></div></div>
+    <div class="panel">
+      <div class="tools">
+        <button class="tab on" data-f="all">All</button><button class="tab" data-f="yes">Attending</button><button class="tab" data-f="no">Declined</button><button class="tab" data-f="wait" id="tabWait">Awaiting</button>
+        <input id="q" type="search" placeholder="Search name, email, message...">
+        <button class="btn" id="refresh">Refresh</button><button class="btn p" id="csv">Download CSV</button><button class="btn" onclick="print()">Print</button>
+      </div>
+      <div class="wrap"><table><thead><tr><th>Guest</th><th>Status</th><th>Guests</th><th>Names and meals</th><th>Notes</th><th>Replied</th></tr></thead><tbody id="rows"></tbody></table></div>
+    </div>
+    <p style="color:var(--muted);font-size:.85rem" id="updated"></p>
+  </div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const key = new URLSearchParams(location.search).get('key') || '';
+let CFG = {}, DATA = null, filter = 'all', rowsAll = [];
+const fail = m => { $('state').className = 'err'; $('state').textContent = m; $('app').style.display = 'none'; };
+
+async function loadCfg() {
+  const t = await (await fetch('index.html', { cache:'no-store' })).text();
+  const m = t.match(/\/\*CONFIG_START\*\/([\s\S]*?)\/\*CONFIG_END\*\//);
+  CFG = new Function(m[1] + ';return CONFIG')();
+  const c = CFG.customColors && CFG.colors && CFG.colors.accent; if (c) document.documentElement.style.setProperty('--accent', c);
+  $('title').textContent = (CFG.partner2 ? CFG.partner1 + ' & ' + CFG.partner2 : CFG.partner1) + ' · ' + (CFG.eventLabel || 'Event');
+  $('sub').textContent = [CFG.dateText, CFG.venueName].filter(Boolean).join(' · ');
+  document.title = 'RSVP dashboard · ' + $('title').textContent;
+}
+async function load() {
+  if (!key) return fail('This page needs its private link. Please use the dashboard link you were given.');
+  try {
+    if (!CFG.rsvpEndpoint) await loadCfg();
+    if (!CFG.rsvpEndpoint) return fail('The RSVP link has not been set up for this invitation yet.');
+    const site = CFG.siteId || location.hostname;
+    const r = await fetch(`${CFG.rsvpEndpoint}?action=summary&site=${encodeURIComponent(site)}&key=${encodeURIComponent(key)}`);
+    const j = await r.json().catch(() => null);
+    if (!j || !j.replies) return fail('The link is not valid, or the dashboard has not been switched on yet. Please contact your invitation designer.');
+    DATA = j; render(); $('state').style.display = 'none'; $('app').style.display = '';
+    $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-AU', { hour:'numeric', minute:'2-digit' }) + '. This page refreshes every minute.';
+  } catch (e) { fail('Could not load the replies. Please check your connection and try again.'); }
+}
+function render() {
+  const g = DATA.guests, rep = DATA.replies, byCode = {};
+  rep.forEach(r => { if (r.code) byCode[r.code.toLowerCase()] = r; });
+  const yes = rep.filter(r => r.attending === 'yes'), no = rep.filter(r => r.attending === 'no');
+  const people = yes.reduce((a, r) => a + r.guests, 0);
+  const hasList = g.length > 0;
+  const waiting = hasList ? g.filter(x => !byCode[x.code.toLowerCase()]) : [];
+  const seats = g.reduce((a, x) => a + x.seats, 0);
+  $('cYes').textContent = people; $('cRep').textContent = rep.length; $('cNo').textContent = no.length;
+  $('cardWait').style.display = hasList ? '' : 'none'; $('cardSeats').style.display = hasList ? '' : 'none'; $('tabWait').style.display = hasList ? '' : 'none';
+  $('cWait').textContent = waiting.length; $('cSeats').textContent = seats;
+  const total = hasList ? g.length : rep.length || 1;
+  $('bar').innerHTML = `<i style="width:${yes.length / total * 100}%;background:var(--yes)"></i><i style="width:${no.length / total * 100}%;background:var(--no)"></i>`;
+  $('lYes').textContent = `${yes.length} attending`; $('lNo').textContent = `${no.length} declined`; $('lWaitW').style.display = hasList ? '' : 'none'; $('lWait').textContent = `${waiting.length} awaiting`;
+  $('progress').style.display = rep.length || hasList ? '' : 'none';
+  // meals
+  const meals = {}; yes.forEach(r => String(r.attendees).split(';').forEach(p => { const m = p.match(/\(([^)]+)\)\s*$/); if (m) meals[m[1]] = (meals[m[1]] || 0) + 1; }));
+  const ml = Object.entries(meals).sort((a, b) => b[1] - a[1]);
+  $('mealPanel').style.display = ml.length ? '' : 'none'; $('meals').innerHTML = ml.map(([k, v]) => `<span><b>${v}</b> ${esc(k)}</span>`).join('');
+  // rows
+  rowsAll = rep.map(r => ({ st: r.attending, name: r.name, email: r.email, phone: r.phone, guests: r.guests, of: (g.find(x => x.code.toLowerCase() === (r.code || '').toLowerCase()) || {}).seats,
+    attendees: r.attendees, notes: [r.dietary && 'Dietary: ' + r.dietary, r.song && 'Song: ' + r.song, r.message && '"' + r.message + '"'].filter(Boolean), time: r.time, unlisted: hasList && r.listed !== 'Yes' }))
+    .concat(waiting.map(x => ({ st: 'wait', name: x.name, email: x.email, phone: '', guests: 0, of: x.seats, attendees: '', notes: [], time: '' })));
+  draw();
+}
+function draw() {
+  const q = $('q').value.trim().toLowerCase();
+  const list = rowsAll.filter(r => (filter === 'all' || r.st === filter) && (!q || JSON.stringify(r).toLowerCase().includes(q)));
+  const lab = { yes:'Attending', no:'Declined', wait:'Awaiting' };
+  $('rows').innerHTML = list.length ? list.map(r => `<tr><td><b>${esc(r.name)}</b>${r.email ? `<small>${esc(r.email)}</small>` : ''}${r.phone ? `<small>${esc(r.phone)}</small>` : ''}${r.unlisted ? '<small>Not on guest list</small>' : ''}</td>
+    <td><span class="pill ${r.st}">${lab[r.st]}</span></td><td>${r.st === 'yes' ? r.guests + (r.of ? ' of ' + r.of : '') : (r.st === 'wait' ? '– of ' + r.of : '–')}</td>
+    <td>${esc(r.attendees).split(';').join('<br>') || '–'}</td><td>${r.notes.map(n => `<small>${esc(n)}</small>`).join('') || '–'}</td><td>${esc(r.time) || '–'}</td></tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nothing to show here yet.</td></tr>';
+}
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('on')); b.classList.add('on'); filter = b.dataset.f; draw(); });
+$('q').oninput = draw; $('refresh').onclick = load;
+$('csv').onclick = () => {
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const out = [['Name', 'Email', 'Phone', 'Status', 'Guests', 'Seats allowed', 'Attendees and meals', 'Dietary and notes', 'Replied']].concat(rowsAll.map(r => [r.name, r.email, r.phone, r.st, r.guests, r.of || '', r.attendees, r.notes.join(' | '), r.time]));
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([out.map(r => r.map(q).join(',')).join('\n')], { type:'text/csv' })); a.download = 'rsvp-replies.csv'; a.click();
+};
+load(); setInterval(() => { if (!document.hidden && DATA) load(); }, 60000);
+</script>
+</body>
+</html>
